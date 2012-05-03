@@ -15,7 +15,7 @@ distutils.core.setup(
     author="dccmx",
     author_email="dccmx@dccmx.com",
     url="http://www.simpletp.org/sniorfy",
-    download_url="http://github.com/downloads/dccmx/sniorfy/sniorfy-%s.tar.gz" % version,
+    download_url="https://github.com/dccmx/sniorfy/tarball/%s" % version,
     license="MIT",
     description="sniorfy is an open source rpc framework in python",
     **kwargs
