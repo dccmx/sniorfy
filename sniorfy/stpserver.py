@@ -28,7 +28,7 @@ class STPConnection(object):
         self.read_arg()
 
     def read_arg(self):
-        self.stream.read_until('\r\n', self._on_arglen)
+        self.stream.read_until(b'\r\n', self._on_arglen)
 
     def _on_arglen(self, data):
         if data == '\r\n':
@@ -44,7 +44,7 @@ class STPConnection(object):
 
     def _on_arg(self, data):
         self._request.add_arg(data)
-        self.stream.read_until('\r\n', self._on_strip_arg_endl)
+        self.stream.read_until(b'\r\n', self._on_strip_arg_endl)
 
     def _on_strip_arg_endl(self, data):
         self.read_arg()

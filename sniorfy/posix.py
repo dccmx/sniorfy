@@ -21,9 +21,6 @@ from __future__ import absolute_import, division, with_statement
 import fcntl
 import os
 
-from sniorfy import interface
-from sniorfy.util import b
-
 
 def set_close_exec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
@@ -35,7 +32,7 @@ def _set_nonblocking(fd):
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
-class Waker(interface.Waker):
+class Waker(object):
     def __init__(self):
         r, w = os.pipe()
         _set_nonblocking(r)
@@ -50,7 +47,7 @@ class Waker(interface.Waker):
 
     def wake(self):
         try:
-            self.writer.write(b("x"))
+            self.writer.write(b"x")
         except IOError:
             pass
 
