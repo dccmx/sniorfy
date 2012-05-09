@@ -248,4 +248,6 @@ def _nested(*managers):
             # Don't rely on sys.exc_info() still containing
             # the right information. Another exception may
             # have been raised and caught by an exit method
-            raise exc[0], exc[1], exc[2]
+            e = exc[0](exc[1])
+            e.__traceback__ = exc[2]
+            raise e

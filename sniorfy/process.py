@@ -23,15 +23,11 @@ import logging
 import os
 import sys
 import time
+import multiprocessing
 
 from binascii import hexlify
 
 from sniorfy import ioloop
-
-try:
-    import multiprocessing  # Python 2.6+
-except ImportError:
-    multiprocessing = None
 
 
 def cpu_count():
@@ -120,7 +116,7 @@ def fork_processes(num_processes, max_restarts=100):
     while children:
         try:
             pid, status = os.wait()
-        except OSError, e:
+        except (OSError) as e:
             if e.errno == errno.EINTR:
                 continue
             raise

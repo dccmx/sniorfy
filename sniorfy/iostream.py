@@ -22,17 +22,11 @@ import collections
 import errno
 import logging
 import socket
-import sys
 import re
+import ssl
 
 from sniorfy import ioloop
 from sniorfy import stack_context
-from sniorfy.util import b, bytes_type
-
-try:
-    import ssl  # Python 2.6+
-except ImportError:
-    ssl = None
 
 
 class IOStream(object):
@@ -119,7 +113,7 @@ class IOStream(object):
         self._connecting = True
         try:
             self.socket.connect(address)
-        except socket.error, e:
+        except (socket.error) as e:
             # In non-blocking mode we expect connect() to raise an
             # exception with EINPROGRESS or EWOULDBLOCK.
             #
@@ -187,7 +181,6 @@ class IOStream(object):
         previously buffered write data and an old write callback, that
         callback is simply overwritten with this new callback.
         """
-        assert isinstance(data, bytes_type)
         self._check_closed()
         if data:
             # We use bool(_write_buffer) as a proxy for write_buffer_size>0,
@@ -346,7 +339,6 @@ class IOStream(object):
         else:
             self._maybe_run_close_callback()
 
-
     def _set_read_callback(self, callback):
         assert not self._read_callback, "Already reading"
         self._read_callback = callback
@@ -383,7 +375,7 @@ class IOStream(object):
         """
         try:
             chunk = self.socket.recv(self.read_chunk_size)
-        except socket.error, e:
+        except (socket.error) as e:
             if e.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
                 return None
             else:
@@ -402,7 +394,7 @@ class IOStream(object):
         """
         try:
             chunk = self._read_from_socket()
-        except socket.error, e:
+        except (socket.error) as e:
             # ssl.SSLError is a subclass of socket.error
             logging.warning("Read error on %d: %s",
                             self.socket.fileno(), e)
@@ -520,7 +512,7 @@ class IOStream(object):
                 self._write_buffer_frozen = False
                 _merge_prefix(self._write_buffer, num_bytes)
                 self._write_buffer.popleft()
-            except socket.error, e:
+            except (socket.error) as e:
                 if e.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
                     self._write_buffer_frozen = True
                     break
@@ -536,7 +528,7 @@ class IOStream(object):
 
     def _consume(self, loc):
         if loc == 0:
-            return b("")
+            return b""
         _merge_prefix(self._read_buffer, loc)
         self._read_buffer_size -= loc
         return self._read_buffer.popleft()
@@ -621,7 +613,7 @@ class SSLIOStream(IOStream):
             self._handshake_reading = False
             self._handshake_writing = False
             self.socket.do_handshake()
-        except ssl.SSLError, err:
+        except (ssl.SSLError) as err:
             if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                 self._handshake_reading = True
                 return
@@ -635,7 +627,7 @@ class SSLIOStream(IOStream):
                 logging.warning("SSL Error on %d: %s", self.socket.fileno(), err)
                 return self.close()
             raise
-        except socket.error, err:
+        except (socket.error) as err:
             if err.args[0] == errno.ECONNABORTED:
                 return self.close()
         else:
@@ -676,14 +668,14 @@ class SSLIOStream(IOStream):
             # called when there is nothing to read, so we have to use
             # read() instead.
             chunk = self.socket.read(self.read_chunk_size)
-        except ssl.SSLError, e:
+        except (ssl.SSLError) as e:
             # SSLError is a subclass of socket.error, so this except
             # block must come first.
             if e.args[0] == ssl.SSL_ERROR_WANT_READ:
                 return None
             else:
                 raise
-        except socket.error, e:
+        except (socket.error) as e:
             if e.args[0] in (errno.EWOULDBLOCK, errno.EAGAIN):
                 return None
             else:
@@ -692,6 +684,7 @@ class SSLIOStream(IOStream):
             self.close()
             return None
         return chunk
+
 
 def _double_prefix(deque):
     """Grow by doubling, but don't split the second chunk just because the
@@ -737,7 +730,7 @@ def _merge_prefix(deque, size):
     if prefix:
         deque.appendleft(type(prefix[0])().join(prefix))
     if not deque:
-        deque.appendleft(b(""))
+        deque.appendleft(b"")
 
 
 def doctests():
