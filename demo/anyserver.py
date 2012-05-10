@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env  python
 # coding: utf-8
 import sniorfy.magicserver
 
@@ -11,6 +11,9 @@ class MyServer(sniorfy.magicserver.MagicServer):
     def func2(self, handler, args):
         for arg in args:
             handler.addarg(arg)
+
+    def ping(self, handler, args):
+        handler.addarg('pong')
 
 
 def main():
