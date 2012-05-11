@@ -28,7 +28,7 @@ class MagicHandler(sniorfy.rpc.RequestHandler):
 class MagicServer(object):
     def __init__(self, port, address=''):
         self.app = Application(self, MagicHandler)
-        self.app.listen(3370)
+        self.app.listen(port)
 
     def start(self):
         sniorfy.ioloop.IOLoop.instance().start()
