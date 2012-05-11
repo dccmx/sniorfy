@@ -1,6 +1,8 @@
 #!/usr/bin/env  python
 # coding: utf-8
 import sniorfy.magicserver
+import sys
+import time
 
 
 class MyServer(sniorfy.magicserver.MagicServer):
@@ -13,11 +15,12 @@ class MyServer(sniorfy.magicserver.MagicServer):
             handler.addarg(arg)
 
     def ping(self, handler, args):
+        time.sleep(2)
         handler.addarg('pong')
 
 
 def main():
-    server = MyServer(3370)
+    server = MyServer(int(sys.argv[1]))
     server.start()
 
 
