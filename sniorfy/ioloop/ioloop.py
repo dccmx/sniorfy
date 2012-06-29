@@ -44,8 +44,8 @@ try:
 except:
     import _thread as thread
 
-from sniorfy import stack_context
-from sniorfy.posix import set_close_exec, Waker
+from . import stack_context
+from .posix import set_close_exec, Waker
 
 
 class IOLoop(object):
@@ -103,6 +103,9 @@ class IOLoop(object):
     WRITE = _EPOLLOUT
     ERROR = _EPOLLERR | _EPOLLHUP
 
+    # Global lock for creating global IOLoop instance
+    _instance_lock = threading.Lock()
+
     def __init__(self, impl=None):
         self._impl = impl or _poll()
         if hasattr(self._impl, 'fileno'):
@@ -141,7 +144,10 @@ class IOLoop(object):
                     self.io_loop = io_loop or IOLoop.instance()
         """
         if not hasattr(IOLoop, "_instance"):
-            IOLoop._instance = IOLoop()
+            with IOLoop._instance_lock:
+                if not hasattr(IOLoop, "_instance"):
+                    # New instance after double check
+                    IOLoop._instance = IOLoop()
         return IOLoop._instance
 
     @staticmethod
@@ -323,11 +329,7 @@ class IOLoop(object):
                         # Happens when the client closes the connection
                         pass
                     else:
-                        logging.error("Exception in I/O handler for fd %s",
-                                      fd, exc_info=True)
-                except Exception:
-                    logging.error("Exception in I/O handler for fd %s",
-                                  fd, exc_info=True)
+                        raise
         # reset the stopped flag so another start/stop pair can be issued
         self._stopped = False
         if self._blocking_signal_threshold is not None:

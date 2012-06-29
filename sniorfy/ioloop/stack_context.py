@@ -71,9 +71,27 @@ from __future__ import absolute_import, division, with_statement
 import contextlib
 import functools
 import itertools
+import operator
 import sys
 import threading
 
+
+def raise_exc_info(exc_info):
+    """Re-raise an exception (with original traceback) from an exc_info tuple.
+
+    The argument is a ``(type, value, traceback)`` tuple as returned by
+    `sys.exc_info`.
+    """
+    # 2to3 isn't smart enough to convert three-argument raise
+    # statements correctly in some cases.
+    if isinstance(exc_info[1], exc_info[0]):
+        raise exc_info[1], None, exc_info[2]
+        # After 2to3: raise exc_info[1].with_traceback(exc_info[2])
+    else:
+        # I think this branch is only taken for string exceptions,
+        # which were removed in Python 2.6.
+        raise exc_info[0], exc_info[1], exc_info[2]
+        # After 2to3: raise exc_info[0](exc_info[1]).with_traceback(exc_info[2])
 
 class _State(threading.local):
     def __init__(self):
@@ -93,24 +111,33 @@ class StackContext(object):
     StackContext takes the function itself rather than its result::
 
       with StackContext(my_context):
+
+    The result of ``with StackContext() as cb:`` is a deactivation
+    callback.  Run this callback when the StackContext is no longer
+    needed to ensure that it is not propagated any further (note that
+    deactivating a context does not affect any instances of that
+    context that are currently pending).  This is an advanced feature
+    and not necessary in most applications.
     '''
-    def __init__(self, context_factory):
+    def __init__(self, context_factory, _active_cell=None):
         self.context_factory = context_factory
+        self.active_cell = _active_cell or [True]
 
     # Note that some of this code is duplicated in ExceptionStackContext
     # below.  ExceptionStackContext is more common and doesn't need
     # the full generality of this class.
     def __enter__(self):
         self.old_contexts = _state.contexts
-        # _state.contexts is a tuple of (class, arg) pairs
+        # _state.contexts is a tuple of (class, arg, active_cell) tuples
         _state.contexts = (self.old_contexts +
-                           ((StackContext, self.context_factory),))
+                           ((StackContext, self.context_factory, self.active_cell),))
         try:
             self.context = self.context_factory()
             self.context.__enter__()
         except Exception:
             _state.contexts = self.old_contexts
             raise
+        return lambda: operator.setitem(self.active_cell, 0, False)
 
     def __exit__(self, type, value, traceback):
         try:
@@ -132,13 +159,16 @@ class ExceptionStackContext(object):
     If the exception handler returns true, the exception will be
     consumed and will not be propagated to other exception handlers.
     '''
-    def __init__(self, exception_handler):
+    def __init__(self, exception_handler, _active_cell=None):
         self.exception_handler = exception_handler
+        self.active_cell = _active_cell or [True]
 
     def __enter__(self):
         self.old_contexts = _state.contexts
         _state.contexts = (self.old_contexts +
-                           ((ExceptionStackContext, self.exception_handler),))
+                           ((ExceptionStackContext, self.exception_handler,
+                             self.active_cell),))
+        return lambda: operator.setitem(self.active_cell, 0, False)
 
     def __exit__(self, type, value, traceback):
         try:
@@ -180,12 +210,16 @@ def wrap(fn):
     # functools.wraps doesn't appear to work on functools.partial objects
     #@functools.wraps(fn)
 
-    def wrapped(callback, contexts, *args, **kwargs):
+    def wrapped(*args, **kwargs):
+        callback, contexts, args = args[0], args[1], args[2:]
+        
         if contexts is _state.contexts or not contexts:
             callback(*args, **kwargs)
             return
         if not _state.contexts:
-            new_contexts = [cls(arg) for (cls, arg) in contexts]
+            new_contexts = [cls(arg, active_cell)
+                            for (cls, arg, active_cell) in contexts
+                            if active_cell[0]]
         # If we're moving down the stack, _state.contexts is a prefix
         # of contexts.  For each element of contexts not in that prefix,
         # create a new StackContext object.
@@ -197,10 +231,13 @@ def wrap(fn):
                 for a, b in itertools.izip(_state.contexts, contexts))):
             # contexts have been removed or changed, so start over
             new_contexts = ([NullContext()] +
-                            [cls(arg) for (cls, arg) in contexts])
+                            [cls(arg, active_cell)
+                             for (cls, arg, active_cell) in contexts
+                             if active_cell[0]])
         else:
-            new_contexts = [cls(arg)
-                            for (cls, arg) in contexts[len(_state.contexts):]]
+            new_contexts = [cls(arg, active_cell)
+                            for (cls, arg, active_cell) in contexts[len(_state.contexts):]
+                            if active_cell[0]]
         if len(new_contexts) > 1:
             with _nested(*new_contexts):
                 callback(*args, **kwargs)
@@ -248,6 +285,4 @@ def _nested(*managers):
             # Don't rely on sys.exc_info() still containing
             # the right information. Another exception may
             # have been raised and caught by an exit method
-            e = exc[0](exc[1])
-            e.__traceback__ = exc[2]
-            raise e
+            raise_exc_info(exc)

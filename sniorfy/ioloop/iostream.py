@@ -21,12 +21,14 @@ from __future__ import absolute_import, division, with_statement
 import collections
 import errno
 import logging
+import os
 import socket
+import sys
 import re
 import ssl
 
-from sniorfy import ioloop
-from sniorfy import stack_context
+from . import ioloop
+from . import stack_context
 
 
 class IOStream(object):
@@ -41,6 +43,9 @@ class IOStream(object):
     For client operations the socket is created with socket.socket(),
     and may either be connected before passing it to the IOStream or
     connected with IOStream.connect.
+
+    When a stream is closed due to an error, the IOStream's `error`
+    attribute contains the exception object.
 
     A very simple (and broken) HTTP client using this class::
 
@@ -78,6 +83,7 @@ class IOStream(object):
         self.io_loop = io_loop or ioloop.IOLoop.instance()
         self.max_buffer_size = max_buffer_size
         self.read_chunk_size = read_chunk_size
+        self.error = None
         self._read_buffer = collections.deque()
         self._write_buffer = collections.deque()
         self._read_buffer_size = 0
@@ -182,10 +188,18 @@ class IOStream(object):
         callback is simply overwritten with this new callback.
         """
         self._check_closed()
+        # We use bool(_write_buffer) as a proxy for write_buffer_size>0,
+        # so never put empty strings in the buffer.
         if data:
-            # We use bool(_write_buffer) as a proxy for write_buffer_size>0,
-            # so never put empty strings in the buffer.
-            self._write_buffer.append(data)
+            # Break up large contiguous strings before inserting them in the
+            # write buffer, so we don't have to recopy the entire thing
+            # as we slice off pieces to send to the socket.
+            WRITE_BUFFER_CHUNK_SIZE = 128 * 1024
+            if len(data) > WRITE_BUFFER_CHUNK_SIZE:
+                for i in range(0, len(data), WRITE_BUFFER_CHUNK_SIZE):
+                    self._write_buffer.append(data[i:i + WRITE_BUFFER_CHUNK_SIZE])
+            else:
+                self._write_buffer.append(data)
         self._write_callback = stack_context.wrap(callback)
         self._handle_write()
         if self._write_buffer:
@@ -199,6 +213,8 @@ class IOStream(object):
     def close(self):
         """Close this stream."""
         if self.socket is not None:
+            if any(sys.exc_info()):
+                self.error = sys.exc_info()[1]
             if self._read_until_close:
                 callback = self._read_callback
                 self._read_callback = None
@@ -249,6 +265,9 @@ class IOStream(object):
             if not self.socket:
                 return
             if events & self.io_loop.ERROR:
+                errno = self.socket.getsockopt(socket.SOL_SOCKET,
+                                               socket.SO_ERROR)
+                self.error = socket.error(errno, os.strerror(errno))
                 # We may have queued up a user callback in _handle_read or
                 # _handle_write, so don't close the IOStream until those
                 # callbacks have had a chance to run.
@@ -341,7 +360,7 @@ class IOStream(object):
 
     def _set_read_callback(self, callback):
         assert not self._read_callback, "Already reading"
-        self._read_callback = callback
+        self._read_callback = stack_context.wrap(callback)
 
     def _try_inline_read(self):
         """Attempt to complete the current read operation from buffered data.
@@ -473,6 +492,7 @@ class IOStream(object):
     def _handle_connect(self):
         err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err != 0:
+            self.error = socket.error(err, os.strerror(err))
             # IOLoop implementations may vary: some of them return
             # an error state before the socket becomes writable, so
             # in that case a connection failure would be handled by the

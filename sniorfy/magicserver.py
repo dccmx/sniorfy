@@ -18,11 +18,11 @@ class MagicHandler(sniorfy.rpc.RequestHandler):
         except AttributeError:
             fn = None
         if fn is not None:
-            self.addarg('OK')
+            self.appendarg('OK')
             fn(self, argv[1:])
         else:
-            self.addarg('ERR')
-            self.addarg('No such method on server')
+            self.appendarg('ERR')
+            self.appendarg('No such method on server')
 
 
 class MagicServer(object):

@@ -25,10 +25,10 @@ import socket
 import stat
 import ssl
 
-from sniorfy import process
-from sniorfy.ioloop import IOLoop
-from sniorfy.iostream import IOStream, SSLIOStream
-from sniorfy.posix import set_close_exec
+from . import process
+from .ioloop import IOLoop
+from .iostream import IOStream, SSLIOStream
+from .posix import set_close_exec
 
 
 class TCPServer(object):

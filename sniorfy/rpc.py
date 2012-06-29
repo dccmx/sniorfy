@@ -29,7 +29,7 @@ class RequestHandler(object):
             return value.encode('utf-8', 'strict')
         return str(value)
 
-    def addarg(self, arg):
+    def appendarg(self, arg):
         arg = self._encode(arg)
         self.request.connection.stream.write('%d\r\n%s\r\n' % (len(arg), arg))
 

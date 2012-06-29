@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-import distutils.core
+from setuptools import setup
 
-kwargs = {}
+version = "0.2.0"
 
-version = "0.1.0"
-
-distutils.core.setup(
+setup(
     name="sniorfy",
     version=version,
-    packages=["sniorfy"],
+    packages=["sniorfy", "sniorfy.ioloop"],
     package_data={
         "sniorfy": ["README.md"],
         },
@@ -18,5 +16,4 @@ distutils.core.setup(
     download_url="https://github.com/dccmx/sniorfy/tarball/%s" % version,
     license="MIT",
     description="sniorfy is an open source rpc framework in python",
-    **kwargs
 )

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
 import socket
-from sniorfy.netutil import TCPServer
+from sniorfy.ioloop.netutil import TCPServer
 
 
 class STPServer(TCPServer):
