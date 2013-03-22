@@ -13,7 +13,7 @@ class RequestHandler(sniorfy.rpc.RequestHandler):
     def deal(self):
         print self.request.argv
         for arg in self.request.argv:
-            self.addarg(arg)
+            self.appendarg(arg)
 
 
 def main():

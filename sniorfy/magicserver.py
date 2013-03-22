@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding: utf-8
+from tornado import ioloop
 import sniorfy.rpc
-import sniorfy.ioloop
 
 
 class Application(sniorfy.rpc.Application):
@@ -31,4 +31,4 @@ class MagicServer(object):
         self.app.listen(port)
 
     def start(self):
-        sniorfy.ioloop.IOLoop.instance().start()
+        ioloop.IOLoop.instance().start()

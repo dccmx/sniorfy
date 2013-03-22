@@ -8,15 +8,15 @@ import time
 class MyServer(sniorfy.magicserver.MagicServer):
     def func1(self, handler, args):
         for arg in args:
-            handler.addarg(arg)
+            handler.appendarg(arg)
 
     def func2(self, handler, args):
         for arg in args:
-            handler.addarg(arg)
+            handler.appendarg(arg)
 
     def ping(self, handler, args):
         time.sleep(2)
-        handler.addarg('pong')
+        handler.appendarg('pong')
 
 
 def main():
