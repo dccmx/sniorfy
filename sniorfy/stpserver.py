@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # coding: utf-8
 import socket
-from tornado.netutil import TCPServer
+try:
+    from tornado.netutil import TCPServer
+except:
+    from tornado.tcpserver import TCPServer
 
 
 class STPServer(TCPServer):
