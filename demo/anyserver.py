@@ -3,19 +3,29 @@
 import sniorfy.magicserver
 import sys
 import time
+import logging
+logging.basicConfig(level=logging.INFO)
 
 
 class MyServer(sniorfy.magicserver.MagicServer):
     def func1(self, handler, args):
+        logging.info('call func1')
+        for arg in args:
+            handler.appendarg(arg)
+
+    def long(self, handler, args):
+        logging.info('call long')
+        time.sleep(2)
         for arg in args:
             handler.appendarg(arg)
 
     def func2(self, handler, args):
+        logging.info('call func2')
         for arg in args:
             handler.appendarg(arg)
 
     def ping(self, handler, args):
-        time.sleep(2)
+        logging.info('call ping')
         handler.appendarg('PONG')
 
 
