@@ -16,7 +16,7 @@ class MyServer(sniorfy.magicserver.MagicServer):
 
     def ping(self, handler, args):
         time.sleep(2)
-        handler.appendarg('pong')
+        handler.appendarg('PONG')
 
 
 def main():
