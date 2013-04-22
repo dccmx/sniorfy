@@ -3,6 +3,7 @@
 import sniorfy.magicserver
 import sys
 import time
+import random
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +17,12 @@ class MyServer(sniorfy.magicserver.MagicServer):
     def long(self, handler, args):
         logging.info('call long')
         time.sleep(2)
+        for arg in args:
+            handler.appendarg(arg)
+
+    def randsleep(self, handler, args):
+        logging.info('call randsleep')
+        time.sleep(random.uniform(0, 1.5))
         for arg in args:
             handler.appendarg(arg)
 
